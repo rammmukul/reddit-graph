@@ -1,13 +1,11 @@
 const graphql = require('graphql')
-const Twitter = require('twitter')
-const options = require('./twitterOptions')
-
-var client = new Twitter(options)
 
 const {
   GraphQLObjectType,
   GraphQLString,
   GraphQLID,
+  GraphQLInt,
+  GraphQLBoolean,
   GraphQLList,
   GraphQLSchema
 } = graphql
@@ -24,11 +22,27 @@ const userType = new GraphQLObjectType({
     name: {type: GraphQLString},
     followers: {
       type: new GraphQLList(userType),
-      async resolve (parent) {
-        return (await client.get('followers/list', {user_id: parent.id})).users
+      async resolve ({id}, _, {followersLoader}) {
+        return followersLoader.load(id)
+      }
+    },
+    tweets: {
+      type: new GraphQLList(tweetType),
+      async resolve ({id}, _, {tweetsLoader}) {
+        return tweetsLoader.load(id)
       }
     }
   })
+})
+
+const tweetType = new GraphQLObjectType({
+  name: 'tweet',
+  fields: {
+    id: {type: GraphQLID},
+    text: {type: GraphQLString},
+    user: {type: userType},
+    truncated: {type: GraphQLBoolean}
+  }
 })
 
 const schema = new GraphQLSchema({
@@ -38,9 +52,15 @@ const schema = new GraphQLSchema({
       user: {
         type: userType,
         args: {username: {type: GraphQLID}},
-        async resolve (_, args) {
-          const params = {screen_name: args.username}
-          return client.get('users/show', params)
+        async resolve (_, args, {userLoader}) {
+          return userLoader.load(args.username)
+        }
+      },
+      tweets: {
+        type: new GraphQLList(tweetType),
+        args: {id: {type: GraphQLInt}},
+        async resolve (_, args, {tweetsLoader}) {
+          return tweetsLoader.load(args.id)
         }
       }
     }
