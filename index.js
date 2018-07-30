@@ -8,14 +8,23 @@ const DataLoader = require('dataloader')
 var client = new Twitter(options)
 
 const loaders = {
-  tweetsLoader: new DataLoader(async keys =>
-    [client.get('statuses/user_timeline', {user_id: keys[0], count: 200})]
+  tweetsLoader: new DataLoader(async ([username]) => {
+    setTimeout(() => loaders.tweetsLoader.clearAll(), 60 * 1000)
+    return [client.get('statuses/user_timeline', {screen_name: username, count: 200})]
+  },
+  {batch: false}
   ),
-  userLoader: new DataLoader(async keys =>
-    [client.get('users/show', {screen_name: keys[0]})]
+  userLoader: new DataLoader(async ([username]) => {
+    setTimeout(() => loaders.userLoader.clearAll(), 60 * 1000)
+    return [client.get('users/show', {screen_name: username})]
+  },
+  {batch: false}
   ),
-  followersLoader: new DataLoader(async keys =>
-    [await client.get('followers/list', {user_id: keys[0], count: 200})]
+  followersLoader: new DataLoader(async ([username]) => {
+    setTimeout(() => loaders.followersLoader.clearAll(), 60 * 1000)
+    return [(await client.get('followers/list', {screen_name: username, count: 200})).users]
+  },
+  {batch: false}
   )
 }
 

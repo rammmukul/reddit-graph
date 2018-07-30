@@ -4,7 +4,6 @@ const {
   GraphQLObjectType,
   GraphQLString,
   GraphQLID,
-  GraphQLInt,
   GraphQLBoolean,
   GraphQLList,
   GraphQLSchema
@@ -14,22 +13,28 @@ const userType = new GraphQLObjectType({
   name: 'user',
   fields: () => ({
     id: {type: GraphQLID},
-    id_str: {type: GraphQLString},
-    screen_name: {type: GraphQLString},
+    idString: {
+      type: GraphQLString,
+      resolve: user => user.id_str
+    },
+    username: {
+      type: GraphQLString,
+      resolve: user => user.screen_name
+    },
     location: {type: GraphQLString},
     description: {type: GraphQLString},
     url: {type: GraphQLString},
     name: {type: GraphQLString},
     followers: {
       type: new GraphQLList(userType),
-      async resolve ({id}, _, {followersLoader}) {
-        return followersLoader.load(id)
+      async resolve ({screen_name: username}, _, {followersLoader}) {
+        return followersLoader.load(username)
       }
     },
     tweets: {
       type: new GraphQLList(tweetType),
-      async resolve ({id}, _, {tweetsLoader}) {
-        return tweetsLoader.load(id)
+      async resolve ({screen_name: username}, _, {tweetsLoader}) {
+        return tweetsLoader.load(username)
       }
     }
   })
@@ -51,6 +56,7 @@ const schema = new GraphQLSchema({
     fields: {
       user: {
         type: userType,
+        description: 'get user profile from username',
         args: {username: {type: GraphQLID}},
         async resolve (_, args, {userLoader}) {
           return userLoader.load(args.username)
@@ -58,9 +64,10 @@ const schema = new GraphQLSchema({
       },
       tweets: {
         type: new GraphQLList(tweetType),
-        args: {id: {type: GraphQLInt}},
+        description: 'get tweets of a user from username',
+        args: {username: {type: GraphQLID}},
         async resolve (_, args, {tweetsLoader}) {
-          return tweetsLoader.load(args.id)
+          return tweetsLoader.load(args.username)
         }
       }
     }
